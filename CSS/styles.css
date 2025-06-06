@@ -1,0 +1,129 @@
+/* 全局样式 */
+body {
+    scroll-behavior: smooth;
+}
+
+/* 导航栏滚动效果 */
+#navbar {
+    transition: all 0.3s ease;
+}
+
+/* 按钮悬停效果 */
+button:not([disabled]):hover {
+    transform: translateY(-1px);
+    transition: transform 0.2s ease;
+}
+
+button:not([disabled]):active {
+    transform: translateY(0);
+}
+
+/* 卡片悬停效果 */
+.card-shadow {
+    transition: all 0.3s ease;
+}
+
+.card-shadow:hover {
+    transform: translateY(-3px);
+}
+
+/* 表单输入焦点效果 */
+input:focus,
+select:focus,
+textarea:focus {
+    box-shadow: 0 0 0 2px rgba(22, 93, 255, 0.2);
+    outline: none;
+}
+
+/* 通知动画 */
+#notification {
+    transition: transform 0.3s ease, opacity 0.3s ease;
+}
+
+/* 模态框动画 */
+#authModal,
+#editTransactionModal {
+    transition: all 0.3s ease;
+}
+
+/* 平滑滚动 */
+html {
+    scroll-behavior: smooth;
+}
+
+/* 自定义滚动条 */
+::-webkit-scrollbar {
+    width: 8px;
+    height: 8px;
+}
+
+::-webkit-scrollbar-track {
+    background: #f1f1f1;
+    border-radius: 10px;
+}
+
+::-webkit-scrollbar-thumb {
+    background: #c1c1c1;
+    border-radius: 10px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+    background: #a1a1a1;
+}
+
+/* 表格行悬停效果 */
+tr:hover {
+    background-color: rgba(22, 93, 255, 0.03);
+}
+
+/* 渐入动画 */
+.fade-in {
+    animation: fadeIn 0.5s ease-in-out;
+}
+
+@keyframes fadeIn {
+    from { opacity: 0; }
+    to { opacity: 1; }
+}
+
+/* 骨架屏动画 */
+.skeleton {
+    background: linear-gradient(90deg, #f0f0f0 25%, #e0e0e0 50%, #f0f0f0 75%);
+    background-size: 200% 100%;
+    animation: shimmer 1.5s infinite;
+}
+
+@keyframes shimmer {
+    0% { background-position: -200% 0; }
+    100% { background-position: 200% 0; }
+}
+
+/* 数字增长动画 */
+.number-animation {
+    transition: all 0.5s ease-out;
+}
+
+/* 图标悬停效果 */
+.fa {
+    transition: transform 0.2s ease;
+}
+
+.fa:hover {
+    transform: scale(1.1);
+}
+
+/* 响应式设计 */
+@media (max-width: 768px) {
+    .card-shadow {
+        box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05), 0 2px 4px -1px rgba(0, 0, 0, 0.03);
+    }
+
+    .card-shadow:hover {
+        transform: translateY(-1px);
+    }
+
+    .container {
+        padding-left: 1rem;
+        padding-right: 1rem;
+    }
+}

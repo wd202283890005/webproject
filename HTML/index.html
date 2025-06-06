@@ -1,0 +1,567 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Financial Manager - Smart bookkeeping app</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://cdn.jsdelivr.net/npm/font-awesome@4.7.0/css/font-awesome.min.css" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.8/dist/chart.umd.min.js"></script>
+    <link href="../CSS/styles.css" rel="stylesheet">
+    <script>
+        // Tailwind配置
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        primary: '#165DFF',
+                        secondary: '#36CFC9',
+                        success: '#52C41A',
+                        warning: '#FAAD14',
+                        danger: '#FF4D4F',
+                        dark: '#1D2129',
+                        light: '#F2F3F5'
+                    },
+                    fontFamily: {
+                        inter: ['Inter', 'system-ui', 'sans-serif'],
+                    },
+                }
+            }
+        }
+    </script>
+    <style type="text/tailwindcss">
+        @layer utilities {
+            .content-auto {
+                content-visibility: auto;
+            }
+            .card-shadow {
+                box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.05), 0 8px 10px -6px rgba(0, 0, 0, 0.03);
+            }
+            .transition-custom {
+                transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            }
+            .gradient-bg {
+                background: linear-gradient(135deg, #165DFF 0%, #36CFC9 100%);
+            }
+
+            /* 文本平衡工具类 - 使用 text-wrap: balance 实现文本行长度优化 */
+            /*@supports (text-wrap: balance) {*/
+            /*    .text-balance {*/
+            /*        text-wrap: balance;*/
+            /*    }*/
+            /*}*/
+        }
+    </style>
+</head>
+<body class="font-inter bg-light text-dark min-h-screen flex flex-col">
+    <!-- 导航栏 -->
+    <header id="navbar" class="bg-white/95 backdrop-blur-sm shadow-sm fixed w-full z-50 transition-custom">
+        <div class="container mx-auto px-4 py-3 flex items-center justify-between">
+            <div class="flex items-center space-x-2">
+                <div class="w-10 h-10 rounded-lg gradient-bg flex items-center justify-center text-white">
+                    <i class="fa fa-line-chart text-xl"></i>
+                </div>
+                <h1 class="text-xl font-bold text-primary">Financial steward</h1>
+            </div>
+
+            <nav class="hidden md:flex items-center space-x-8">
+                <a href="#dashboard" class="font-medium hover:text-primary transition-custom">Dashboard</a>
+                <a href="#transactions" class="font-medium hover:text-primary transition-custom">Transaction History</a>
+                <a href="#add-transaction" class="font-medium hover:text-primary transition-custom">Add Record</a>
+            </nav>
+
+            <div class="flex items-center space-x-4">
+                <button id="profileBtn" class="hidden md:flex items-center space-x-2 hover:text-primary transition-custom">
+                    <div class="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center">
+                        <i class="fa fa-user text-primary"></i>
+                    </div>
+                    <span id="usernameDisplay" class="font-medium">Not logged in</span>
+                </button>
+                <button id="loginBtn" class="px-4 py-2 rounded-lg bg-primary text-white hover:bg-primary/90 transition-custom">
+                    <i class="fa fa-sign-in mr-2"></i>Login
+                </button>
+                <button id="mobileMenuBtn" class="md:hidden text-dark hover:text-primary">
+                    <i class="fa fa-bars text-xl"></i>
+                </button>
+            </div>
+        </div>
+
+        <!-- 移动端菜单 -->
+        <div id="mobileMenu" class="md:hidden hidden bg-white border-t absolute w-full">
+            <div class="container mx-auto px-4 py-3 flex flex-col space-y-4">
+                <a href="#dashboard" class="font-medium py-2 hover:text-primary transition-custom">Dashboard</a>
+                <a href="#transactions" class="font-medium py-2 hover:text-primary transition-custom">Transaction History</a>
+                <a href="#add-transaction" class="font-medium py-2 hover:text-primary transition-custom">Add Record</a>
+                <div class="flex items-center space-x-2 py-2">
+                    <div class="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center">
+                        <i class="fa fa-user text-primary"></i>
+                    </div>
+                    <span id="mobileUsernameDisplay" class="font-medium">Not logged in</span>
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <!-- 登录/注册模态框 -->
+    <div id="authModal" class="fixed inset-0 bg-dark/50 flex items-center justify-center z-50 hidden">
+        <div class="bg-white rounded-xl w-full max-w-md p-6 shadow-xl transform transition-all">
+            <div class="flex justify-between items-center mb-6">
+                <h2 id="authModalTitle" class="text-2xl font-bold text-primary">Login</h2>
+                <button id="closeAuthModal" class="text-gray-500 hover:text-dark">
+                    <i class="fa fa-times text-xl"></i>
+                </button>
+            </div>
+
+            <form id="authForm" class="space-y-4">
+                <div class="space-y-2">
+                    <label for="authUsername" class="block text-sm font-medium text-gray-700">Username</label>
+                    <div class="relative">
+                        <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                            <i class="fa fa-user text-gray-400"></i>
+                        </div>
+                        <input type="text" id="authUsername" name="username" required
+                            class="pl-10 block w-full rounded-lg border border-gray-300 shadow-sm focus:ring-primary focus:border-primary sm:text-sm">
+                    </div>
+                </div>
+
+                <div class="space-y-2">
+                    <label for="authPassword" class="block text-sm font-medium text-gray-700">password</label>
+                    <div class="relative">
+                        <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                            <i class="fa fa-lock text-gray-400"></i>
+                        </div>
+                        <input type="password" id="authPassword" name="password" required
+                            class="pl-10 block w-full rounded-lg border border-gray-300 shadow-sm focus:ring-primary focus:border-primary sm:text-sm">
+                    </div>
+                </div>
+
+                <div id="authError" class="hidden text-sm text-danger bg-danger/10 p-2 rounded-lg"></div>
+
+                <button type="submit" id="authSubmitBtn" class="w-full flex justify-center py-3 px-4 border border-transparent rounded-lg shadow-sm text-sm font-medium text-white bg-primary hover:bg-primary/90 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary transition-custom">
+                    Login
+                </button>
+
+                <div class="text-center">
+                    <button type="button" id="toggleAuthMode" class="text-primary hover:text-primary/80 font-medium transition-custom">
+                        Don't have an account yet? enroll
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- 主内容区 -->
+    <main class="flex-grow pt-20 pb-10">
+        <!-- 欢迎/Not login状态 -->
+        <section id="welcomeSection" class="container mx-auto px-4 py-10 text-center">
+            <div class="max-w-2xl mx-auto">
+                <div class="w-24 h-24 mx-auto rounded-2xl gradient-bg flex items-center justify-center mb-6">
+                    <i class="fa fa-money text-4xl text-white"></i>
+                </div>
+                <h2 class="text-[clamp(1.8rem,5vw,3rem)] font-bold mb-4 text-balance">Smart financial management, start here</h2>
+                <p class="text-lg text-gray-600 mb-8 text-balance">Easily keep track of your income and expenses, stay on top of your finances, and achieve your financial goals</p>
+                <button id="startLoginBtn" class="px-8 py-3 rounded-lg bg-primary text-white text-lg hover:bg-primary/90 transition-custom shadow-lg shadow-primary/20">
+                    Start Now <i class="fa fa-arrow-right ml-2"></i>
+                </button>
+            </div>
+        </section>
+
+        <!-- 已登录内容区 -->
+        <section id="appContent" class="container mx-auto px-4 py-10 hidden">
+            <!-- 仪表盘 -->
+            <section id="dashboard" class="mb-16">
+                <h2 class="text-2xl font-bold mb-8 flex items-center">
+                    <i class="fa fa-dashboard text-primary mr-2"></i> Financial overview
+                </h2>
+
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+                    <!-- 收入卡片 -->
+                    <div class="bg-white rounded-xl p-6 card-shadow hover:shadow-lg transition-custom">
+                        <div class="flex justify-between items-start mb-4">
+                            <div>
+                                <p class="text-gray-500 font-medium">Income</p>
+                                <h3 id="incomeAmount" class="text-3xl font-bold text-success">¥0.00</h3>
+                            </div>
+                            <div class="w-12 h-12 rounded-lg bg-success/10 flex items-center justify-center">
+                                <i class="fa fa-arrow-down text-success text-xl"></i>
+                            </div>
+                        </div>
+                        <div class="flex items-center text-sm text-gray-500">
+                            <span id="incomeChange" class="text-success mr-1">+0%</span>
+                            <span>than the previous period</span>
+                        </div>
+                    </div>
+
+                    <!-- 支出卡片 -->
+                    <div class="bg-white rounded-xl p-6 card-shadow hover:shadow-lg transition-custom">
+                        <div class="flex justify-between items-start mb-4">
+                            <div>
+                                <p class="text-gray-500 font-medium">expenditures</p>
+                                <h3 id="expenseAmount" class="text-3xl font-bold text-danger">¥0.00</h3>
+                            </div>
+                            <div class="w-12 h-12 rounded-lg bg-danger/10 flex items-center justify-center">
+                                <i class="fa fa-arrow-up text-danger text-xl"></i>
+                            </div>
+                        </div>
+                        <div class="flex items-center text-sm text-gray-500">
+                            <span id="expenseChange" class="text-danger mr-1">+0%</span>
+                            <span>than the previous period</span>
+                        </div>
+                    </div>
+
+                    <!-- 结余卡片 -->
+                    <div class="bg-white rounded-xl p-6 card-shadow hover:shadow-lg transition-custom">
+                        <div class="flex justify-between items-start mb-4">
+                            <div>
+                                <p class="text-gray-500 font-medium">Balance</p>
+                                <h3 id="balanceAmount" class="text-3xl font-bold text-primary">¥0.00</h3>
+                            </div>
+                            <div class="w-12 h-12 rounded-lg bg-primary/10 flex items-center justify-center">
+                                <i class="fa fa-balance-scale text-primary text-xl"></i>
+                            </div>
+                        </div>
+                        <div class="flex items-center text-sm text-gray-500">
+                            <span id="balanceChange" class="text-primary mr-1">+0%</span>
+                            <span>than the previous period</span>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
+                    <!-- 收支趋势图表 -->
+                    <div class="bg-white rounded-xl p-6 card-shadow">
+                        <div class="flex justify-between items-center mb-6">
+                            <h3 class="font-bold text-lg">Trends in income and expenditure</h3>
+                            <div class="flex space-x-2">
+                                <button class="trend-filter-btn px-3 py-1 rounded-md bg-primary text-white text-sm">Month</button>
+                                <button class="trend-filter-btn px-3 py-1 rounded-md bg-gray-100 text-gray-700 text-sm hover:bg-gray-200">Quarter</button>
+                                <button class="trend-filter-btn px-3 py-1 rounded-md bg-gray-100 text-gray-700 text-sm hover:bg-gray-200">Year</button>
+                            </div>
+                        </div>
+                        <div class="h-80">
+                            <canvas id="trendChart"></canvas>
+                        </div>
+                    </div>
+
+                    <!-- 支出分类图表 -->
+                    <div class="bg-white rounded-xl p-6 card-shadow">
+                        <div class="flex justify-between items-center mb-6">
+                            <h3 class="font-bold text-lg">Expense classification</h3>
+                            <button class="text-primary hover:text-primary/80 text-sm font-medium transition-custom">
+                                Find out more
+                            </button>
+                        </div>
+                        <div class="h-80">
+                            <canvas id="expenseCategoryChart"></canvas>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- 交易记录 -->
+            <section id="transactions" class="mb-16">
+                <div class="flex justify-between items-center mb-6">
+                    <h2 class="text-2xl font-bold flex items-center">
+                        <i class="fa fa-history text-primary mr-2"></i> Transaction History
+                    </h2>
+                    <div class="flex items-center space-x-4">
+                        <div class="relative">
+                            <input type="text" id="transactionSearch" placeholder="Search..."
+                                class="pl-10 pr-4 py-2 rounded-lg border border-gray-300 focus:ring-primary focus:border-primary">
+                            <i class="fa fa-search absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400"></i>
+                        </div>
+                        <select id="transactionFilter" class="px-4 py-2 rounded-lg border border-gray-300 focus:ring-primary focus:border-primary">
+                            <option value="all">All types</option>
+                            <option value="income">Income</option>
+                            <option value="expense">expenditures</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div class="bg-white rounded-xl overflow-hidden card-shadow">
+                    <div class="overflow-x-auto">
+                        <table class="w-full">
+                            <thead>
+                                <tr class="bg-gray-50">
+                                    <th class="px-6 py-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Date</th>
+                                    <th class="px-6 py-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Description</th>
+                                    <th class="px-6 py-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">category</th>
+                                    <th class="px-6 py-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Amount</th>
+                                    <th class="px-6 py-4 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">operate</th>
+                                </tr>
+                            </thead>
+                            <tbody id="transactionTableBody" class="divide-y divide-gray-200">
+                                <!-- 交易记录将通过JS动态插入 -->
+                                <tr class="text-center">
+                                    <td colspan="5" class="px-6 py-12 text-gray-500">
+                                        <div class="flex flex-col items-center">
+                                            <i class="fa fa-file-text-o text-4xl mb-4 text-gray-300"></i>
+                                            <p>There is no transaction record yet</p>
+                                        </div>
+                                    </td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+
+                    <div class="px-6 py-4 flex items-center justify-between border-t border-gray-200">
+                        <div class="text-sm text-gray-700">
+                            Show <span id="transactionCount">0</span> records
+                        </div>
+                        <div class="flex space-x-2">
+                            <button class="px-3 py-1 rounded-md border border-gray-300 text-sm text-gray-700 disabled:opacity-50" disabled>
+                                Last
+                            </button>
+                            <button class="px-3 py-1 rounded-md border border-gray-300 text-sm text-gray-700 disabled:opacity-50" disabled>
+                                Next
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- 添加交易记录 -->
+            <section id="add-transaction">
+                <h2 class="text-2xl font-bold mb-8 flex items-center">
+                    <i class="fa fa-plus-circle text-primary mr-2"></i> Add
+                </h2>
+
+                <div class="bg-white rounded-xl p-6 card-shadow max-w-2xl mx-auto">
+                    <form id="transactionForm" class="space-y-6">
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                            <div class="space-y-2">
+                                <label class="block text-sm font-medium text-gray-700">TransactionType</label>
+                                <div class="flex space-x-3">
+                                    <label class="inline-flex items-center">
+                                        <input type="radio" id="transactionTypeIncome" name="transactionType" value="income" class="form-radio h-5 w-5 text-primary" checked>
+                                        <span class="ml-2 text-gray-700">Income</span>
+                                    </label>
+                                    <label class="inline-flex items-center">
+                                        <input type="radio" id="transactionTypeExpense" name="transactionType" value="expense" class="form-radio h-5 w-5 text-primary">
+                                        <span class="ml-2 text-gray-700">expenditure</span>
+                                    </label>
+                                </div>
+                            </div>
+
+                            <div class="space-y-2">
+                                <label for="transactionDate" class="block text-sm font-medium text-gray-700">Date</label>
+                                <input type="date" id="transactionDate" name="date" required
+                                    class="block w-full rounded-lg border border-gray-300 shadow-sm focus:ring-primary focus:border-primary sm:text-sm">
+                            </div>
+                        </div>
+
+                        <div class="space-y-2">
+                            <label for="transactionDescription" class="block text-sm font-medium text-gray-700">Description</label>
+                            <input type="text" id="transactionDescription" name="description"
+                                class="block w-full rounded-lg border border-gray-300 shadow-sm focus:ring-primary focus:border-primary sm:text-sm"
+                                placeholder="例如：工资收入、购买食品等">
+                        </div>
+
+                        <div class="space-y-2">
+                            <label for="transactionCategory" class="block text-sm font-medium text-gray-700">Category</label>
+                            <select id="transactionCategory" name="category" required
+                                class="block w-full rounded-lg border border-gray-300 shadow-sm focus:ring-primary focus:border-primary sm:text-sm">
+                                <!-- 收入分类 -->
+                                <optgroup label="收入分类">
+                                    <option value="salary">wages</option>
+                                    <option value="bonus">bonus</option>
+                                    <option value="investment">Investment income</option>
+                                    <option value="other_income">Others</option>
+                                </optgroup>
+                                <!-- 支出分类 -->
+                                <optgroup label="支出分类">
+                                    <option value="food">Food</option>
+                                    <option value="transportation">Transportation</option>
+                                    <option value="housing">Housing</option>
+                                    <option value="shopping">Shopping</option>
+                                    <option value="entertainment">Entertainment</option>
+                                    <option value="medical">Medical</option>
+                                    <option value="education">Education</option>
+                                    <option value="other_expense">Other</option>
+                                </optgroup>
+                            </select>
+                        </div>
+
+                        <div class="space-y-2">
+                            <label for="transactionAmount" class="block text-sm font-medium text-gray-700">金额</label>
+                            <div class="relative">
+                                <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                                    <span class="text-gray-500">¥</span>
+                                </div>
+                                <input type="number" id="transactionAmount" name="amount" step="0.01" min="0.01"
+                                    class="pl-8 block w-full rounded-lg border border-gray-300 shadow-sm focus:ring-primary focus:border-primary sm:text-sm">
+                            </div>
+                        </div>
+
+                        <div id="transactionFormError" class="hidden text-sm text-danger bg-danger/10 p-3 rounded-lg"></div>
+
+                        <div class="flex justify-end space-x-4">
+                            <button type="button" id="resetTransactionForm" class="px-4 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50 transition-custom">
+                                Reset
+                            </button>
+                            <button type="submit" class="px-6 py-2 bg-primary text-white rounded-lg hover:bg-primary/90 transition-custom shadow-md shadow-primary/20">
+                                Save
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </section>
+        </section>
+    </main>
+
+    <!-- 页脚 -->
+    <footer class="bg-white border-t border-gray-200 py-6">
+        <div class="container mx-auto px-4">
+            <div class="flex flex-col md:flex-row justify-between items-center">
+                <div class="mb-4 md:mb-0">
+                    <div class="flex items-center space-x-2">
+                        <div class="w-8 h-8 rounded-lg gradient-bg flex items-center justify-center text-white">
+                            <i class="fa fa-line-chart"></i>
+                        </div>
+                        <span class="font-bold text-primary">Financial Manager</span>
+                    </div>
+                    <p class="text-sm text-gray-500 mt-1">Intelligent financial management assistant</p>
+                </div>
+
+                <div class="flex space-x-6 mb-4 md:mb-0">
+                    <a href="#" class="text-gray-500 hover:text-primary transition-custom">
+                        <i class="fa fa-question-circle"></i> Help
+                    </a>
+                    <a href="#" class="text-gray-500 hover:text-primary transition-custom">
+                        <i class="fa fa-shield"></i> Privacy Policy
+                    </a>
+                    <a href="#" class="text-gray-500 hover:text-primary transition-custom">
+                        <i class="fa fa-file-text-o"></i> Terms of Use
+                    </a>
+                </div>
+
+                <div class="flex space-x-4">
+                    <a href="#" class="w-10 h-10 rounded-full bg-gray-100 flex items-center justify-center text-gray-500 hover:bg-primary hover:text-white transition-custom">
+                        <i class="fa fa-weixin"></i>
+                    </a>
+                    <a href="#" class="w-10 h-10 rounded-full bg-gray-100 flex items-center justify-center text-gray-500 hover:bg-primary hover:text-white transition-custom">
+                        <i class="fa fa-weibo"></i>
+                    </a>
+                    <a href="#" class="w-10 h-10 rounded-full bg-gray-100 flex items-center justify-center text-gray-500 hover:bg-primary hover:text-white transition-custom">
+                        <i class="fa fa-github"></i>
+                    </a>
+                </div>
+            </div>
+
+            <div class="mt-6 pt-6 border-t border-gray-100 text-center text-sm text-gray-500">
+                &copy; 2023 Financial Manager - Smart bookkeeping app | All rights reserved
+            </div>
+        </div>
+    </footer>
+
+    <!-- 编辑交易模态框 -->
+    <div id="editTransactionModal" class="fixed inset-0 bg-dark/50 flex items-center justify-center z-50 hidden">
+        <div class="bg-white rounded-xl w-full max-w-md p-6 shadow-xl transform transition-all">
+            <div class="flex justify-between items-center mb-6">
+                <h2 class="text-2xl font-bold text-primary">Edit</h2>
+                <button id="closeEditModal" class="text-gray-500 hover:text-dark">
+                    <i class="fa fa-times text-xl"></i>
+                </button>
+            </div>
+
+            <form id="editTransactionForm" class="space-y-4">
+                <input type="hidden" id="editTransactionId">
+
+                <div class="space-y-2">
+                    <label class="block text-sm font-medium text-gray-700">TransactionCategory</label>
+                    <div class="flex space-x-3">
+                        <label class="inline-flex items-center">
+                            <input type="radio" id="editTransactionTypeIncome" name="editTransactionType" value="income" class="form-radio h-5 w-5 text-primary">
+                            <span class="ml-2 text-gray-700">Income</span>
+                        </label>
+                        <label class="inline-flex items-center">
+                            <input type="radio" id="editTransactionTypeExpense" name="editTransactionType" value="expense" class="form-radio h-5 w-5 text-primary">
+                            <span class="ml-2 text-gray-700">Expenditure</span>
+                        </label>
+                    </div>
+                </div>
+
+                <div class="space-y-2">
+                    <label for="editTransactionDate" class="block text-sm font-medium text-gray-700">Date</label>
+                    <input type="date" id="editTransactionDate" name="date" required
+                        class="block w-full rounded-lg border border-gray-300 shadow-sm focus:ring-primary focus:border-primary sm:text-sm">
+                </div>
+
+                <div class="space-y-2">
+                    <label for="editTransactionDescription" class="block text-sm font-medium text-gray-700">Description</label>
+                    <input type="text" id="editTransactionDescription" name="description"
+                        class="block w-full rounded-lg border border-gray-300 shadow-sm focus:ring-primary focus:border-primary sm:text-sm">
+                </div>
+
+                <div class="space-y-2">
+                    <label for="editTransactionCategory" class="block text-sm font-medium text-gray-700">Category</label>
+                    <select id="editTransactionCategory" name="category" required
+                        class="block w-full rounded-lg border border-gray-300 shadow-sm focus:ring-primary focus:border-primary sm:text-sm">
+                        <!-- 收入分类 -->
+                        <optgroup label="收入分类">
+                            <option value="salary">Wage</option>
+                            <option value="bonus">Bonus</option>
+                            <option value="investment">Investment income</option>
+                            <option value="other_income">Other</option>
+                        </optgroup>
+                        <!-- 支出分类 -->
+                        <optgroup label="支出分类">
+                            <option value="food">Food</option>
+                            <option value="transportation">Transportation</option>
+                            <option value="housing">Hosing</option>
+                            <option value="shopping">Shopping</option>
+                            <option value="entertainment">Entertainment</option>
+                            <option value="medical">Medical</option>
+                            <option value="education">Education</option>
+                            <option value="other_expense">Other</option>
+                        </optgroup>
+                    </select>
+                </div>
+
+                <div class="space-y-2">
+                    <label for="editTransactionAmount" class="block text-sm font-medium text-gray-700">Amount</label>
+                    <div class="relative">
+                        <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                            <span class="text-gray-500">¥</span>
+                        </div>
+                        <input type="number" id="editTransactionAmount" name="amount" step="0.01" min="0.01"
+                            class="pl-8 block w-full rounded-lg border border-gray-300 shadow-sm focus:ring-primary focus:border-primary sm:text-sm">
+                    </div>
+                </div>
+
+                <div id="editTransactionFormError" class="hidden text-sm text-danger bg-danger/10 p-3 rounded-lg"></div>
+
+                <div class="flex justify-end space-x-4">
+                    <button type="button" id="deleteTransactionBtn" class="px-4 py-2 border border-danger text-danger rounded-lg hover:bg-danger/10 transition-custom">
+                        <i class="fa fa-trash mr-1"></i> Delete
+                    </button>
+                    <button type="button" id="cancelEditBtn" class="px-4 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50 transition-custom">
+                        Cancel
+                    </button>
+                    <button type="submit" class="px-6 py-2 bg-primary text-white rounded-lg hover:bg-primary/90 transition-custom shadow-md shadow-primary/20">
+                        Save
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- 通知提示 -->
+    <div id="notification" class="fixed top-4 right-4 bg-white rounded-lg shadow-lg p-4 max-w-xs transform transition-all duration-300 translate-x-full opacity-0 z-50">
+        <div class="flex items-start">
+            <div id="notificationIcon" class="flex-shrink-0 w-6 h-6 rounded-full bg-primary flex items-center justify-center text-white mr-3">
+                <i class="fa fa-info"></i>
+            </div>
+            <div class="flex-1">
+                <h3 id="notificationTitle" class="font-medium text-gray-900">Notification title</h3>
+                <p id="notificationMessage" class="text-sm text-gray-500 mt-1">Content of the notification</p>
+            </div>
+            <button id="closeNotification" class="ml-3 text-gray-400 hover:text-gray-500">
+                <i class="fa fa-times"></i>
+            </button>
+        </div>
+    </div>
+
+    <script src="../JS/app.js"></script>
+</body>
+</html>
